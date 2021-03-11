@@ -10,6 +10,7 @@ const moment = require('moment');
 const User = require('./../models/User');
 const token_key = process.env.TOKEN_KEY;
  
+
 // middleware setup
 router.use(bodyParser.json());
 router.use(bodyParser.urlencoded({extended: true}));
@@ -17,10 +18,11 @@ router.use(bodyParser.urlencoded({extended: true}));
  
 //default rout
 //Access: public
-// url http://localhot:500 
+// url http://localhot:500/api/users/
+// method:GET
 router.get(
     '/', (req,res) =>{
-        res.status(200).json(
+        return res.status(200).json(
             {
                 "status": true,
                 "message": "user Default Route."
@@ -30,8 +32,9 @@ router.get(
 
 //user register routs
 //Access: public
-// url http://localhot:500 
-router.post(
+// url http://localhot:500/api/user/register 
+// method:POST
+router.post( 
     '/register',
     [
         //check empty field
@@ -40,7 +43,7 @@ router.post(
 
         //check email
         check('email').isEmail().normalizeEmail()
-    ],
+    ], 
     (req,res) =>{
         const errors = validationResult(req);
         //check error is not empty
@@ -50,9 +53,15 @@ router.post(
                  "errors" : errors.array()
              })
         }
+
+ 
+        const salt = bcrypt.genSaltSync(10)
+        const hashedPassword = bcrypt.hashSync(req.body.password, salt);
+        
         return res.status(200).json({
             "status":true,
-            "data":req.body
+            "data":req.body,
+            "hashedPassword": hashedPassword
         });
     });
 
