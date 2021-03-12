@@ -11,6 +11,9 @@ const User = require('./../models/User');
 const token_key = process.env.TOKEN_KEY;
 
 
+const storage = require('./storage');
+
+
 // middleware setup
 router.use(bodyParser.json());
 router.use(bodyParser.urlencoded({ extended: true }));
@@ -50,56 +53,149 @@ router.post(
         if (!errors.isEmpty()) {
             return res.status(400).json({
                 "status": false,
-                "errors": errors.array()
-            })
+                "errors": errors.array(),
+                "message": "Form Validation error...."
+            });
         }
 
 
 
-        
+
         User.findOne({ email: req.body.email }).then(user => {
-           //user email exist or not
+
+            //user email exist or not
+            //check user
             if (user) {
                 return res.status(409).json({
                     "status": false,
                     "message": "user email alredy exist"
                 });
             }
-            else{
+            else {
 
                 const salt = bcrypt.genSaltSync(10)
                 const hashedPassword = bcrypt.hashSync(req.body.password, salt);
 
-                
+
                 const newUser = new User({
                     email: req.body.email,
                     username: req.body.username,
-                    password:hashedPassword
+                    password: hashedPassword
                 });
 
-                newUser.save().then(result =>{
+                newUser.save().then(result => {
                     return res.status(200).json({
                         "status": true,
                         "user": result
                     });
-                }).catch(error =>{
+                }).catch(error => {
                     return res.status(502).json({
                         "status": false,
                         "user": error
                     });
-                })
+                });
             }
-        }).catch(error =>{
+
+        }).catch(error => {
             return res.status(502).json({
                 "status": false,
                 "user": error
             });
-        })
+        });
 
 
 
-       
+
     });
+
+
+//user profile pic routs
+//Access: public
+// url http://localhot:500/api/user/uploadProfilePic 
+// method:POST
+
+router.post(
+    '/uploadProfilePic', (req, res) => {
+        let upload = storage.getProfilePicUpload();
+        upload(req, res, (error) => {
+
+            if (error) {
+                return res.status(400).json({
+                    "status": false,
+                    "error": error,
+                    "message": "File upload error"
+                });
+            } else {
+                return res.status(200).json({
+                    "status": true,
+                    "message": "File upload suscces"
+                });
+            }
+        });
+    });
+
+
+//user login route
+//Access: public
+// url http://localhot:500/api/user/login 
+// method:POST
+
+router.post(
+    '/login',
+    [
+        //check empty field
+        check('password').not().isEmpty().trim().escape(),
+        //check email
+        check('email').isEmail().normalizeEmail()
+    ],
+    (req, res) => {
+        const errors = validationResult(req);
+        //check error is not empty
+        if (!errors.isEmpty()) {
+            return res.status(400).json({
+                "status": false,
+                "errors": errors.array(),
+                "message": "Form Validation error...."
+
+            });
+        }
+
+        User.findOne({ email: req.body.email }).then((user) => {
+            //if user dont exist
+            if (!user) {
+                return res.status(404).json({
+                    "status": false, 
+                    "message": "User don't exist......"
+                });
+            }
+            else {
+
+                //match user password
+                let isPasswordMatch = bcrypt.compareSync(req.body.password, user.password);
+
+                //check is not password match
+
+                if (!isPasswordMatch) {
+                    return res.status(401).json({
+                        "status": false,
+                        "message": "password don't match"
+                    });
+                }
+
+                return res.status(200).json({
+                    "status": true,
+                    "message": "User Login Success"
+                });
+            }
+
+        }).catch((error) => {
+            return res.status(502).json({
+                "status": true,
+                "message": "database error...."
+            });
+        });
+    });
+
 
 
 module.exports = router;
