@@ -9,7 +9,7 @@ const moment = require('moment');
 
 const User = require('./../models/User');
 const token_key = process.env.TOKEN_KEY;
-
+ 
 
 const storage = require('./storage');
 
@@ -182,11 +182,25 @@ router.post(
                     });
                 }
 
+                //jeson web token genrate
+                let token = jwt.sign(
+                    {
+                        id: user._id,
+                        email:user.email
+                    },
+                    token_key,
+                    {
+                        expiresIn: 3600
+                    });
+                //login success
                 return res.status(200).json({
                     "status": true,
-                    "message": "User Login Success"
+                    "message": "User Login Success",
+                    "token": token,
+                    "user" : user
+
                 });
-            }
+            } 
 
         }).catch((error) => {
             return res.status(502).json({
