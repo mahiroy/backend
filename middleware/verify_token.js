@@ -6,6 +6,7 @@ const User = require('./../models/User');
 function veryfyToken (req,res,next){
     //read jwt token from HTTP Header
     const token = req.headers['x-access-token'];
+
     //check token is empty
     if (!token){
         return res.status(404).json({
@@ -14,7 +15,7 @@ function veryfyToken (req,res,next){
             
 
         });
-        jwt.verify(token, token_key, function(erro, decoded){
+        jwt.verify(token, token_key, function(errror, decoded){
             //check error
             if (error){
                 return res.status(401).json({

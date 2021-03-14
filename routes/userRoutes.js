@@ -10,9 +10,10 @@ const moment = require('moment');
 const User = require('./../models/User');
 const token_key = process.env.TOKEN_KEY;
 const veryfyToken = require('./../middleware/verify_token');
- 
+
 
 const storage = require('./storage');
+const { rawListeners } = require('./../models/User');
 
 
 // middleware setup
@@ -111,27 +112,60 @@ router.post(
 
 
 //user profile pic routs
-//Access: public
+//Access: private
 // url http://localhot:500/api/user/uploadProfilePic 
 // method:POST
 
 router.post(
-    '/uploadProfilePic', (req, res) => {
+    '/uploadProfilePic',
+    veryfyToken,
+    (req, res) => {
         let upload = storage.getProfilePicUpload();
+
         upload(req, res, (error) => {
 
-            if (error) {
-                return res.status(400).json({
+            //if profile pic not uploded
+            if (req.file) {
+                return res.status(204).json({
                     "status": false,
-                    "error": error,
-                    "message": "File upload error"
+                    "message": "please upload profile pic"
                 });
-            } else {
+            };
+
+            //if profile pic upload errors
+            if (error) {
+               return res.status(400).json({
+                 "status":false,
+                 "error": error,
+                 "message": "FIle Upload Fail"
+               });
+
+            };         
+
+            //store new profile pic name to user document
+            let temp = {
+                profile_pic: req.file.filename, ipdatedAt: moment().format("DD/MM/YYYY") + ";" + moment().format("hh:mm:ss")
+                };
+            
+            User.findOneAndUpdate({ _id: user.id }, { $set: temp }).then(user => {
+
+                
                 return res.status(200).json({
                     "status": true,
-                    "message": "File upload suscces"
+                    "message": "File upload suscces",
+                    "profile_pic" : "http://localhost:500/profile_pic/" + user.profile_pic  
                 });
-            }
+    
+            }).catch(error =>{
+                return res.status(502).json({
+                "status": true,
+                "message": "database error...."
+            });
+            });
+
+
+           
+
         });
     });
 
@@ -165,7 +199,7 @@ router.post(
             //if user dont exist
             if (!user) {
                 return res.status(404).json({
-                    "status": false, 
+                    "status": false,
                     "message": "User don't exist......"
                 });
             }
@@ -187,7 +221,7 @@ router.post(
                 let token = jwt.sign(
                     {
                         id: user._id,
-                        email:user.email
+                        email: user.email
                     },
                     token_key,
                     {
@@ -198,10 +232,10 @@ router.post(
                     "status": true,
                     "message": "User Login Success",
                     "token": token,
-                    "user" : user
+                    "user": user
 
                 });
-            } 
+            }
 
         }).catch((error) => {
             return res.status(502).json({
@@ -213,13 +247,13 @@ router.post(
 
 
 
-    //
-    router.get('/testJWT' , veryfyToken, (req,res) => {
-        return res.status(200).json({
-            "status": true,
-            "message": "JSON Web Token working...."
-        });
-    })
+//
+router.get('/testJWT', veryfyToken, (req, res) => {
+    return res.status(200).json({
+        "status": true,
+        "message": "JSON Web Token working...."
+    });
+})
 
 
 
